@@ -49,7 +49,7 @@ pub enum Cell {
 }
 
 impl Cell {
-    fn calculate_pattern(answer: &str, guess: &str) -> [Self; 5] {
+    pub fn calculate_pattern(answer: &str, guess: &str) -> [Self; 5] {
         let answer_bytes = answer.as_bytes();
         let guess_bytes = guess.as_bytes();
         let mut pattern = [Self::Wrong; 5];
@@ -65,11 +65,29 @@ impl Cell {
 
         pattern
     }
+
+    // Return all 243 possible patterns
+    pub fn patterns() -> impl Iterator<Item = [Self; 5]> {
+        itertools::iproduct!(
+            [Self::Correct, Self::Misplaced, Self::Wrong],
+            [Self::Correct, Self::Misplaced, Self::Wrong],
+            [Self::Correct, Self::Misplaced, Self::Wrong],
+            [Self::Correct, Self::Misplaced, Self::Wrong],
+            [Self::Correct, Self::Misplaced, Self::Wrong]
+        )
+        .map(|(c1, c2, c3, c4, c5)| [c1, c2, c3, c4, c5])
+    }
 }
 
 pub struct Guess {
     word: String,
     pattern: [Cell; 5],
+}
+
+impl Guess {
+    pub fn matches(&self, other: &str) -> bool {
+        true
+    }
 }
 
 pub trait Guesser {
