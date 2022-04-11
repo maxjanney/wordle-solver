@@ -1,3 +1,7 @@
+pub mod naive;
+
+pub use naive::Naive;
+
 use std::collections::HashSet;
 
 const MAX_TRIES: usize = 32;
@@ -16,15 +20,14 @@ impl Wordle {
         }
     }
 
-    pub fn play<G: Guesser>(&self, answer: &'static str, mut guesser: G) -> Option<usize> {
+    pub fn play<G: Guesser>(&self, answer: &str, mut guesser: G) -> Option<usize> {
         let mut history = Vec::new();
         for i in 0..MAX_TRIES {
             let guess = guesser.guess(&history);
-            self.words.contains(&*guess);
             if guess == answer {
                 return Some(i);
             }
-
+            assert!(self.words.contains(&*guess), "Invalid guess: {}", guess);
             let pattern = Cell::calculate_pattern(answer, &guess);
             history.push(Guess {
                 word: guess,
