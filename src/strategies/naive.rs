@@ -11,7 +11,7 @@ pub struct Naive {
 impl Naive {
     pub fn new() -> Self {
         Self {
-            remaining: include_str!("../words.txt")
+            remaining: include_str!("../../words.txt")
                 .lines()
                 .map(|line| line.split_once(' ').expect("word + space + frequency").0)
                 .collect(),

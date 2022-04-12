@@ -1,7 +1,7 @@
 use clap::{ArgEnum, Parser};
 use wordle_solver::{Guesser, Wordle};
 
-const ANSWERS: &str = include_str!("../answers.txt");
+const GAMES: &str = include_str!("../answers.txt");
 
 /// Program to solve wordle games using different strategies.
 #[derive(Parser)]
@@ -9,6 +9,7 @@ struct Args {
     /// Strategy to solve each game
     #[clap(short, long, arg_enum)]
     strat: Strategy,
+
     /// The number of games to play.
     ///
     /// If not specified, all possible games are played.
@@ -30,12 +31,17 @@ fn main() {
 
 fn play<G: Guesser>(maker: impl Fn() -> G, n: usize) {
     let wordle = Wordle::new();
-    for answer in ANSWERS.lines().take(n) {
+    let mut games = 0;
+    let mut score = 0;
+    for game in GAMES.lines().take(n) {
         let guesser = (maker)();
-        if let Some(n) = wordle.play(answer, guesser) {
-            println!("Solved {} in {} tries!", answer, n)
+        if let Some(n) = wordle.play(game, guesser) {
+            games += 1;
+            score += n;
+            println!("Solved {} in {} tries!", game, n);
         } else {
-            println!("We couldn't solve {}", answer);
+            eprintln!("We couldn't solve {}", game);
         }
     }
+    println!("Average score: {}", score as f64 / games as f64);
 }

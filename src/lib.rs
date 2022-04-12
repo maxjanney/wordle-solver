@@ -1,6 +1,6 @@
-pub mod naive;
+pub mod strategies;
 
-pub use naive::Naive;
+pub use strategies::naive::Naive;
 
 use std::collections::HashSet;
 
@@ -38,7 +38,7 @@ impl Wordle {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Cell {
     // Green
     Correct,
@@ -50,19 +50,25 @@ pub enum Cell {
 
 impl Cell {
     pub fn calculate_pattern(answer: &str, guess: &str) -> [Self; 5] {
-        let answer_bytes = answer.as_bytes();
-        let guess_bytes = guess.as_bytes();
+        let answer = answer.as_bytes();
+        let guess = guess.as_bytes();
         let mut pattern = [Self::Wrong; 5];
-
-        // Check for greens
-        for (i, (&a, &g)) in answer_bytes.iter().zip(guess_bytes).enumerate() {
+        let mut used = [0u8; (b'z' - b'a' + 1) as usize];
+        // Add the greens
+        for (i, (&a, &g)) in answer.iter().zip(guess).enumerate() {
             if a == g {
                 pattern[i] = Self::Correct;
+            } else {
+                used[(a - b'a') as usize] += 1;
             }
         }
-
-        // TODO: Check for yellows
-
+        // Add the yellows
+        for (&g, c) in guess.iter().zip(pattern.iter_mut()) {
+            if *c == Self::Wrong && used[(g - b'a') as usize] > 0 {
+                *c = Self::Misplaced;
+                used[(g - b'a') as usize] -= 1;
+            }
+        }
         pattern
     }
 
