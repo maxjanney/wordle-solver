@@ -2,7 +2,7 @@ pub mod strategies;
 
 pub use strategies::naive::Naive;
 
-use std::collections::HashSet;
+use std::{borrow::Cow, collections::HashSet};
 
 const MAX_TRIES: usize = 32;
 
@@ -30,7 +30,7 @@ impl Wordle {
             assert!(self.words.contains(&*guess), "Invalid guess: {}", guess);
             let pattern = Cell::calculate_pattern(answer, &guess);
             history.push(Guess {
-                word: guess,
+                word: Cow::Owned(guess),
                 pattern,
             })
         }
@@ -55,9 +55,9 @@ impl Cell {
         let mut pattern = [Self::Wrong; 5];
         let mut used = [0u8; (b'z' - b'a' + 1) as usize];
         // Add the greens
-        for (i, (&a, &g)) in answer.iter().zip(guess).enumerate() {
+        for ((&a, &g), c) in answer.iter().zip(guess).zip(pattern.iter_mut()) {
             if a == g {
-                pattern[i] = Self::Correct;
+                *c = Self::Correct;
             } else {
                 used[(a - b'a') as usize] += 1;
             }
@@ -72,7 +72,6 @@ impl Cell {
         pattern
     }
 
-    // Return all 243 possible patterns
     pub fn patterns() -> impl Iterator<Item = [Self; 5]> {
         itertools::iproduct!(
             [Self::Correct, Self::Misplaced, Self::Wrong],
@@ -85,14 +84,14 @@ impl Cell {
     }
 }
 
-pub struct Guess {
-    word: String,
+pub struct Guess<'a> {
+    word: Cow<'a, str>,
     pattern: [Cell; 5],
 }
 
-impl Guess {
-    pub fn matches(&self, other: &str) -> bool {
-        true
+impl<'a> Guess<'a> {
+    pub fn matches(&self, word: &str) -> bool {
+        Cell::calculate_pattern(word, &self.word) == self.pattern
     }
 }
 

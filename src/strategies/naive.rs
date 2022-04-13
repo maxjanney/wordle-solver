@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{borrow::Cow, collections::HashSet};
 
 use crate::{Cell, Guess, Guesser};
 
@@ -31,14 +31,31 @@ impl Guesser for Naive {
             return "tares".into();
         }
 
-        // let mut best_guess: Option<&str> = None;
+        let mut best_guess: Option<(&str, f64)> = None;
         for &word in self.remaining.iter() {
-            let mut entropy = 0.0;
-            for pattern in Cell::patterns() {}
+            let mut sum = 0.0;
+            for pattern in Cell::patterns() {
+                let g = Guess {
+                    word: Cow::Borrowed(word),
+                    pattern,
+                };
+                let p = self
+                    .remaining
+                    .iter()
+                    .filter(|&&word| g.matches(word))
+                    .count() as f64
+                    / self.remaining.len() as f64;
+                sum += p * p.log2();
+            }
+            let e = -sum;
+            if let Some((_, s)) = best_guess {
+                if s < e {
+                    best_guess = Some((word, e))
+                }
+            } else {
+                best_guess = Some((word, e));
+            }
         }
-
-        "".into()
-
-        // best_guess.unwrap().into()
+        best_guess.unwrap().0.into()
     }
 }
