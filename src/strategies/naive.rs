@@ -1,9 +1,9 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::borrow::Cow;
 
 use crate::{Cell, Guess, Guesser};
 
 pub struct Naive {
-    remaining: HashMap<&'static str, usize>,
+    remaining: Vec<(&'static str, usize)>,
 }
 
 impl Naive {
@@ -26,7 +26,7 @@ impl Guesser for Naive {
     fn guess(&mut self, history: &[Guess]) -> String {
         // retain only the words that match the result of the previous guess
         if let Some(guess) = history.last() {
-            self.remaining.retain(|&word, _| guess.matches(word));
+            self.remaining.retain(|&(word, _)| guess.matches(word));
         }
 
         // "tares" will always be the first guess
@@ -34,14 +34,13 @@ impl Guesser for Naive {
             return "tares".into();
         }
 
-        let remaining_count = self.remaining.iter().map(|(_, &c)| c).sum::<usize>();
-
+        let remaining_count: usize = self.remaining.iter().map(|&(_, c)| c).sum();
         let mut best: Option<(&str, f64)> = None;
-        for (&word, _) in &self.remaining {
+        for &(word, _) in self.remaining.iter() {
             let mut sum = 0.0;
             for pattern in Cell::patterns() {
                 let mut pattern_total = 0;
-                for (&candidate, count) in &self.remaining {
+                for &(candidate, count) in self.remaining.iter() {
                     let g = Guess {
                         word: Cow::Borrowed(word),
                         pattern,
