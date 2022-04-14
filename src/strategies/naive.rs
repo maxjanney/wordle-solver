@@ -1,11 +1,9 @@
-use std::{borrow::Cow, collections::HashSet};
+use std::{borrow::Cow, collections::HashMap};
 
 use crate::{Cell, Guess, Guesser};
 
-// The naive method only considers entropy
-// and ignores the relative frequency
 pub struct Naive {
-    remaining: HashSet<&'static str>,
+    remaining: HashMap<&'static str, usize>,
 }
 
 impl Naive {
@@ -13,7 +11,12 @@ impl Naive {
         Self {
             remaining: include_str!("../../words.txt")
                 .lines()
-                .map(|line| line.split_once(' ').expect("word + space + frequency").0)
+                .map(|line| {
+                    let (word, freq) = line.split_once(' ').expect("word + space + frequency");
+                    let freq = freq.parse::<usize>().expect("frequency must be a number");
+                    assert!(word.len() == 5);
+                    (word, freq)
+                })
                 .collect(),
         }
     }
@@ -23,7 +26,7 @@ impl Guesser for Naive {
     fn guess(&mut self, history: &[Guess]) -> String {
         // retain only the words that match the result of the previous guess
         if let Some(guess) = history.last() {
-            self.remaining.retain(|&word| guess.matches(word));
+            self.remaining.retain(|&word, _| guess.matches(word));
         }
 
         // "tares" will always be the first guess
@@ -31,31 +34,37 @@ impl Guesser for Naive {
             return "tares".into();
         }
 
-        let mut best_guess: Option<(&str, f64)> = None;
-        for &word in self.remaining.iter() {
+        let remaining_count = self.remaining.iter().map(|(_, &c)| c).sum::<usize>();
+
+        let mut best: Option<(&str, f64)> = None;
+        for (&word, _) in &self.remaining {
             let mut sum = 0.0;
             for pattern in Cell::patterns() {
-                let g = Guess {
-                    word: Cow::Borrowed(word),
-                    pattern,
-                };
-                let p = self
-                    .remaining
-                    .iter()
-                    .filter(|&&word| g.matches(word))
-                    .count() as f64
-                    / self.remaining.len() as f64;
+                let mut pattern_total = 0;
+                for (&candidate, count) in &self.remaining {
+                    let g = Guess {
+                        word: Cow::Borrowed(word),
+                        pattern,
+                    };
+                    if g.matches(candidate) {
+                        pattern_total += count;
+                    }
+                }
+                if pattern_total == 0 {
+                    continue;
+                }
+                let p = pattern_total as f64 / remaining_count as f64;
                 sum += p * p.log2();
             }
             let e = -sum;
-            if let Some((_, s)) = best_guess {
+            if let Some((_, s)) = best {
                 if s < e {
-                    best_guess = Some((word, e))
+                    best = Some((word, e))
                 }
             } else {
-                best_guess = Some((word, e));
+                best = Some((word, e));
             }
         }
-        best_guess.unwrap().0.into()
+        best.unwrap().0.into()
     }
 }

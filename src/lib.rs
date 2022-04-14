@@ -1,10 +1,8 @@
 pub mod strategies;
 
-pub use strategies::naive::Naive;
+pub use strategies::Naive;
 
 use std::{borrow::Cow, collections::HashSet};
-
-const MAX_TRIES: usize = 32;
 
 pub struct Wordle {
     words: HashSet<&'static str>,
@@ -22,7 +20,7 @@ impl Wordle {
 
     pub fn play<G: Guesser>(&self, answer: &str, mut guesser: G) -> Option<usize> {
         let mut history = Vec::new();
-        for i in 0..MAX_TRIES {
+        for i in 1..=32 {
             let guess = guesser.guess(&history);
             if guess == answer {
                 return Some(i);
