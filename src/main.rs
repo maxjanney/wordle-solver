@@ -1,5 +1,5 @@
 use clap::{ArgEnum, Parser};
-use wordle_solver::{Guesser, Wordle};
+use wordle_solver::{Guesser, Word, Wordle};
 
 const GAMES: &str = include_str!("../answers.txt");
 
@@ -35,12 +35,16 @@ fn play<G: Guesser>(maker: impl Fn() -> G, n: usize) {
     let mut score = 0;
     for game in GAMES.lines().take(n) {
         let guesser = (maker)();
+        let game: Word = game
+            .as_bytes()
+            .try_into()
+            .expect("every word should be 5 letters");
         if let Some(n) = wordle.play(game, guesser) {
             games += 1;
             score += n;
-            println!("Solved {} in {} tries!", game, n);
+            println!("Solved {:?} in {} tries!", game, n);
         } else {
-            eprintln!("We couldn't solve {}", game);
+            eprintln!("We couldn't solve {:?}", game);
         }
     }
     println!("Average score: {}", score as f64 / games as f64);

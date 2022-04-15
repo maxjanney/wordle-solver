@@ -1,9 +1,7 @@
-use std::borrow::Cow;
-
-use crate::{Cell, Guess, Guesser};
+use crate::{Cell, Guess, Guesser, Word};
 
 pub struct Naive {
-    remaining: Vec<(&'static str, usize)>,
+    remaining: Vec<(Word, usize)>,
 }
 
 impl Naive {
@@ -14,7 +12,10 @@ impl Naive {
                 .map(|line| {
                     let (word, freq) = line.split_once(' ').expect("word + space + frequency");
                     let freq = freq.parse::<usize>().expect("frequency must be a number");
-                    assert!(word.len() == 5);
+                    let word = word
+                        .as_bytes()
+                        .try_into()
+                        .expect("every word must be 5 characters");
                     (word, freq)
                 })
                 .collect(),
@@ -23,7 +24,7 @@ impl Naive {
 }
 
 impl Guesser for Naive {
-    fn guess(&mut self, history: &[Guess]) -> String {
+    fn guess(&mut self, history: &[Guess]) -> Word {
         // retain only the words that match the result of the previous guess
         if let Some(guess) = history.last() {
             self.remaining.retain(|&(word, _)| guess.matches(word));
@@ -31,20 +32,17 @@ impl Guesser for Naive {
 
         // "tares" will always be the first guess
         if history.is_empty() {
-            return "tares".into();
+            return *b"tares";
         }
 
         let remaining_count: usize = self.remaining.iter().map(|&(_, c)| c).sum();
-        let mut best: Option<(&str, f64)> = None;
-        for &(word, _) in self.remaining.iter() {
+        let mut best: Option<(Word, f64)> = None;
+        for &(word, _) in &*self.remaining {
             let mut sum = 0.0;
             for pattern in Cell::patterns() {
                 let mut pattern_total = 0;
-                for &(candidate, count) in self.remaining.iter() {
-                    let g = Guess {
-                        word: Cow::Borrowed(word),
-                        pattern,
-                    };
+                for &(candidate, count) in &*self.remaining {
+                    let g = Guess { word, pattern };
                     if g.matches(candidate) {
                         pattern_total += count;
                     }
