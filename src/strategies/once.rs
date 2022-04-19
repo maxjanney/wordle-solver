@@ -1,33 +1,51 @@
 use crate::{Cell, Guess, Guesser, Word};
 
-pub struct Naive {
-    remaining: Vec<(Word, usize)>,
+use once_cell::sync::OnceCell;
+use std::borrow::Cow;
+
+static INSTANCE: OnceCell<Vec<(Word, usize)>> = OnceCell::new();
+
+pub struct Once {
+    remaining: Cow<'static, Vec<(Word, usize)>>,
 }
 
-impl Naive {
+impl Once {
     pub fn new() -> Self {
         Self {
-            remaining: include_str!("../../words.txt")
-                .lines()
-                .map(|line| {
-                    let (word, freq) = line.split_once(' ').expect("word + space + frequency");
-                    let freq = freq.parse::<usize>().expect("frequency must be a number");
-                    let word = word
-                        .as_bytes()
-                        .try_into()
-                        .expect("every word must be 5 characters");
-                    (word, freq)
-                })
-                .collect(),
+            remaining: Cow::Borrowed(INSTANCE.get_or_init(|| {
+                include_str!("../../words.txt")
+                    .lines()
+                    .map(|line| {
+                        let (word, freq) = line.split_once(' ').expect("word + space + frequency");
+                        let freq = freq.parse().expect("frequency must be a number");
+                        let word = word
+                            .as_bytes()
+                            .try_into()
+                            .expect("every word must be 5 characters");
+                        (word, freq)
+                    })
+                    .collect()
+            })),
         }
     }
 }
 
-impl Guesser for Naive {
+impl Guesser for Once {
     fn guess(&mut self, history: &[Guess]) -> Word {
-        // retain only the words that match the result of the previous guess
         if let Some(guess) = history.last() {
-            self.remaining.retain(|&(word, _)| guess.matches(word));
+            if matches!(self.remaining, Cow::Owned(_)) {
+                self.remaining
+                    .to_mut()
+                    .retain(|&(word, _)| guess.matches(word));
+            } else {
+                self.remaining = Cow::Owned(
+                    self.remaining
+                        .iter()
+                        .filter(|&&(word, _)| guess.matches(word))
+                        .copied()
+                        .collect(),
+                );
+            }
         }
 
         // "tares" will always be the first guess

@@ -1,3 +1,5 @@
-pub mod naive;
+pub mod lazy;
+pub mod once;
 
-pub use self::naive::Naive;
+pub use self::lazy::Lazy;
+pub use self::once::Once;
